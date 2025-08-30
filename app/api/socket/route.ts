@@ -13,10 +13,16 @@ const userSockets = new Map<string, string>()
 async function makeApiCall(url: string, options: RequestInit, retries = 3): Promise<Response> {
   for (let i = 0; i < retries; i++) {
     try {
+      // Create AbortController for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
       const response = await fetch(url, {
         ...options,
-        timeout: 10000, // 10 second timeout
+        signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
 
       if (response.ok) {
         return response
@@ -31,6 +37,9 @@ async function makeApiCall(url: string, options: RequestInit, retries = 3): Prom
 
       // If it's the last retry, throw the error
       if (i === retries - 1) {
+        if (error instanceof Error && error.name === "AbortError") {
+          throw new Error("Request timed out. Please check your connection.")
+        }
         throw error
       }
 
@@ -70,7 +79,10 @@ export async function GET(req: NextRequest) {
         userSockets.set(socket.id, username)
 
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_URL || `http://localhost:3000`
+          const baseUrl =
+            process.env.NEXT_PUBLIC_URL ||
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+
           await makeApiCall(`${baseUrl}/api/users/${username}/status`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -99,7 +111,10 @@ export async function GET(req: NextRequest) {
           console.log("[v0] Message send event:", data)
 
           try {
-            const baseUrl = process.env.NEXT_PUBLIC_URL || `http://localhost:3000`
+            const baseUrl =
+              process.env.NEXT_PUBLIC_URL ||
+              (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+
             const response = await makeApiCall(`${baseUrl}/api/messages`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -118,12 +133,22 @@ export async function GET(req: NextRequest) {
             socket.emit("message:delivered", { messageId: message.id })
           } catch (error) {
             console.error("[v0] Error sending message:", error)
-            const errorMessage = error instanceof Error ? error.message : "Failed to send message"
-            socket.emit("message:error", {
-              error: errorMessage.includes("fetch")
-                ? "Network connection failed. Please check your internet connection."
-                : errorMessage,
-            })
+
+            let errorMessage = "Failed to send message"
+
+            if (error instanceof Error) {
+              if (error.message.includes("timed out") || error.name === "AbortError") {
+                errorMessage = "Network connection timed out. Please check your internet connection and try again."
+              } else if (error.message.includes("fetch")) {
+                errorMessage = "Network connection failed. Please check your internet connection."
+              } else if (error.message.includes("500")) {
+                errorMessage = "Server error. Please try again in a moment."
+              } else {
+                errorMessage = error.message
+              }
+            }
+
+            socket.emit("message:error", { error: errorMessage })
           }
         },
       )
@@ -146,7 +171,10 @@ export async function GET(req: NextRequest) {
       // Handle message read receipts
       socket.on("message:read", async (data: { messageId: string; currentUser: string }) => {
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_URL || `http://localhost:3000`
+          const baseUrl =
+            process.env.NEXT_PUBLIC_URL ||
+            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+
           const response = await makeApiCall(`${baseUrl}/api/messages/${data.messageId}/read`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -175,7 +203,10 @@ export async function GET(req: NextRequest) {
           userSockets.delete(socket.id)
 
           try {
-            const baseUrl = process.env.NEXT_PUBLIC_URL || `http://localhost:3000`
+            const baseUrl =
+              process.env.NEXT_PUBLIC_URL ||
+              (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+
             await makeApiCall(`${baseUrl}/api/users/${username}/status`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },

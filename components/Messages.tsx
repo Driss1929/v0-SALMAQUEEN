@@ -307,12 +307,31 @@ function Messages() {
 
       if (connectionStatus === "disconnected" || connectionStatus === "error") {
         setNotification({
-          message: "Connection lost. Attempting to reconnect...",
+          message: "Connection lost. Reconnecting...",
           type: "error",
         })
 
         // Try to reconnect
         socketManager.connect(currentUser.username)
+
+        // Wait a moment before sending
+        setTimeout(() => {
+          if (socketManager.isConnected()) {
+            socketManager.sendMessage({
+              sender_username: currentUser.username,
+              receiver_username: otherUsername,
+              content: newMessage.trim(),
+              message_type: "text",
+            })
+            setNewMessage("")
+          } else {
+            setNotification({
+              message: "Unable to reconnect. Please refresh the page and try again.",
+              type: "error",
+            })
+          }
+        }, 1000)
+        return
       }
 
       socketManager.sendMessage({
