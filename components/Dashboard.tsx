@@ -14,7 +14,7 @@ function Dashboard({ children }: DashboardProps) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-card to-background">
       <div className="flex">
         {/* Sidebar */}
         <div className="w-80 p-4 hidden lg:block">
@@ -25,7 +25,7 @@ function Dashboard({ children }: DashboardProps) {
         <div className="lg:hidden fixed top-4 left-4 z-50">
           <button
             onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-            className="bg-white p-3 rounded-xl shadow-lg"
+            className="bg-card p-3 rounded-xl shadow-lg border border-border"
           >
             ☰
           </button>

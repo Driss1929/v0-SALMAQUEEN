@@ -2,7 +2,7 @@
 import { useAuth } from "../contexts/AuthContext"
 import Login from "../components/Login"
 import Dashboard from "../components/Dashboard"
-import Challenge from "../components/Challenge"
+import MoodTracker from "../components/MoodTracker"
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -17,7 +17,7 @@ function AppContent() {
 
   return (
     <Dashboard>
-      <Challenge />
+      <MoodTracker />
     </Dashboard>
   )
 }

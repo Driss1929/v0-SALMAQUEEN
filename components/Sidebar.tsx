@@ -21,6 +21,7 @@ function Sidebar() {
     { path: "/journal", label: "Journal", icon: "📖" },
     { path: "/messages", label: "Messages", icon: "💬" },
     { path: "/stories", label: "Stories", icon: "📚" },
+    { path: "/settings", label: "Customization", icon: "🎨" }, // Added customization settings to navigation
   ]
 
   if (!currentUser) return null
